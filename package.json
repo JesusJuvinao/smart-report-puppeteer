@@ -13,7 +13,9 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
-    "mongoose": "^6.1.1"
+    "fs": "0.0.1-security",
+    "mongoose": "^6.1.1",
+    "puppeteer": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"
