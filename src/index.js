@@ -1,10 +1,9 @@
-/* eslint-disable no-param-reassign */
 import express from 'express'
 import puppeteer from 'puppeteer'
 import ModelGolf from './lib/models/golfModel'
 require('./lib/db')
-const push = () => {
-    const newGof = new ModelGolf({ reference: '234234' })
+const push = async () => {
+    const newGof = new ModelGolf({ cStatus: true })
     return newGof
 }
 push()
@@ -18,11 +17,14 @@ async function doWebScraping() {
         args: [
             '--start-maximized',
             '--disable-web-security',
-            '--disable-features=IsolateOrigins,site-per-process'
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--allow-external-pages',
+            '--allow-third-party-modules',
+            '--data-reduction-proxy-http-proxies',
+            '--no-sandbox'
         ]
     })
     const page = await browser.newPage()
-    const context = await browser.createIncognitoBrowserContext()
     // get dimentions
     const dimensions = await page.evaluate(() => {
         return {
@@ -32,8 +34,8 @@ async function doWebScraping() {
         }
     })
     // Create a new page in a pristine context.
-    await context.newPage()
     // Do stuff
+    await page.evaluate(() => window.scrollBy(0, 1000))
     await page.setDefaultNavigationTimeout(0)
     await page.setViewport({ width: 1480, height: 800 })
     // await page.goto('https://www.pts.cloud/', { waitUntil: 'networkidle2' })
@@ -58,85 +60,98 @@ async function doWebScraping() {
     await page.click('.custom_class li > a ')
     await page.waitForSelector('#PaymentStatusId')
     await page.waitFor(2000)
-    // await page.click('#PaymentStatusId')
-    // const selectElem = await page.$('select[name="PaymentStatusId"]');
-    // await selectElem.type('alue 2');
     await page.select('select#PaymentStatusId', '1')
     await page.click('#btnSearchClient')
-    await page.waitFor(2000)
-    // await page.keyboard.press('ArrowDown');
-    // await page.click('#value')
-    // await page.waitForSelector('.travel-search-client .heading')
-    const end = Date.now() + 11000
-    while (Date.now() < end) {
-        console.log('START')
-    }
-    console.log('END')
+    // const end = Date.now() + 50000
+    await page.screenshot({ path: 'example.png' })
+    await page.waitForTimeout(30000);
+    // const link = await page.evaluate(() => Array.from(document.querySelectorAll('.travel-search-client .table tr td > a'), element => element.href));
+    // console.log(link)
+    // await page.waitForSelector('.travel-search-client .table tr td a')
     // DOBLE EVENTO
     // await videos[2].click()
-    // Get the link to all the required books
-    // const urls = await page.$$eval('section ol > li', links => {
-    //     // Make sure the book to be scraped is in stock
-    //     links = links.filter(
-    //         link => link.querySelector('.instock.availability > i').textContent !==
-    //             'In stock'
-    //     )
-    //     // Extract the links from the data
-    //     links = links.map(el => el.querySelector('h3 > a').href)
-    //     return links
-    // })
-    // Loop through each of those links, open a new page instance and get the relevant data from them
-    // const pagePromise = link => new Promise(async (resolve, reject) => {
-    //     const dataObj = {}
-    //     const newPage = await browser.newPage()
-    //     await newPage.goto(link)
-    //     dataObj['bookTitle'] = await newPage.$eval(
-    //         '.product_main > h1',
-    //         text => text.textContent
-    //     )
-    //     dataObj['bookPrice'] = await newPage.$eval(
-    //         '.price_color',
-    //         text => text.textContent
-    //     )
-    //     dataObj['noAvailable'] = await newPage.$eval(
-    //         '.instock.availability',
-    //         text => {
-    //             // Strip new line and tab spaces
-    //             text = text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')
-    //             // Get the number of stock available
-    //             const regexp = /^.*\((.*)\).*$/i
-    //             const stockAvailable = regexp.exec(text)[1].split(' ')[0]
-    //             return stockAvailable
-    //         }
-    //     )
-    //     dataObj['imageUrl'] = await newPage.$eval(
-    //         '#product_gallery img',
-    //         img => img.src
-    //     )
-    //     dataObj['bookDescription'] = await newPage.$eval(
-    //         '#product_description',
-    //         div => div.nextSibling.nextSibling.textContent
-    //     )
-    //     dataObj['upc'] = await newPage.$eval(
-    //         '.table.table-striped > tbody > tr > td',
-    //         table => table.textContent
-    //     )
-    //     resolve(dataObj)
-    //     await newPage.close()
-    // })
-    // for (link in urls) {
-    //     const currentPageData = await pagePromise(urls[link])
-    //     // scrapedData.push(currentPageData);
-    //     console.log(currentPageData)
+    // const link = await page.evaluate(() => Array.from(document.querySelectorAll('.travel-search-client .table tr td > a'), element => element.href));
+    // console.log(link)
+    // for (let i = 0, total_urls = link.length; i < total_urls; i++) {
+    //     await page.goto(link[i])
+    //     // Get the data ...
     // }
-    // console.log(urls)
-    // await page.emulate(iPhone)
+    // const itemsList = await page.$('.travel-search-client .table tr') // Using '.$' is the puppeteer equivalent of 'querySelector'
+    // const elements = await itemsList.$$('td > a') // Using '.$$' is the puppeteer equivalent of 'querySelectorAll'
 
-    console.log('Dimensions:', dimensions)
+    // const data = []
+    // elements.forEach(async element => {
+    //     // await element.click()
+    //     console.log(element)
+    // })
+    // await page.evaluate(async () => {
+    //     await new Promise(function (resolve) {
+    //         setTimeout(resolve, 1000)
+    //     })
+    // })
+
+    const urls = await page.$$eval('.travel-search-client .table tr', links => {
+        // Extract the links from the data
+        links = links.filter(
+            link => link.querySelector('td > a') !== null || undefined || ''
+        )
+        links = links.map(el => el.querySelector('td > a').href)
+        console.log(links, 'LOSLINS')
+        const records = []
+        return links
+    })
+    // for (let i = 0; i < links.length; i++) {
+    //     console.log('helloooooooo')
+    //     records.push({
+    //         ref: 'holaa'
+    //     })
+    //     console.log(records)
+    // }
+    // await newPage.goto(link)
+    // resolve(dataObj)
+    // })
+    console.log(urls, 'HERE')
+
+    const dataObj = {}
+    for (let i = 0, totalUrls = urls.length; i < totalUrls; i++) {
+        const newPage = await browser.newPage()
+        await newPage.goto(urls[i]);
+        dataObj['Client'] = await newPage.$eval('#lblClientRefNo', text => text.textContent);
+        console.log(dataObj)
+        await newPage.close()
+        // Get the data ...
+    }
+
+    // // find the link, by going over all links on the page
+    // async function findByLink(page, linkString) {
+    //     const links = await page.$$('a')
+    //     for (let i = 0; i < links.length; i++) {
+    //         const valueHandle = await links[i].getProperty('innerText')
+    //         const linkText = await valueHandle.jsonValue()
+    //         const text = getText(linkText)
+    //         if (linkString == text) {
+    //             console.log(linkString)
+    //             console.log(text)
+    //             console.log('Found')
+    //             return links[i]
+    //         }
+    //     }
+    //     return null
+    // }
+
+    const nextPageButton = await page.waitForXPath(
+        '//*[@id="clientDetails"]/div[2]/ul/li[11]'
+    )
+    console.log(nextPageButton)
+    await nextPageButton.click()
+
+    // #tableClientList > tbody > tr:nth-child(100)
+    // #clientDetails > div.pager > ul > li:nth-child(11)
+
     const html = await page.content()
+    console.log('Dimensions:', dimensions)
     fs.writeFile('page.html', html, function (err) {
         if (err) throw err
-
         console.log('Html Saved')
     })
 }
