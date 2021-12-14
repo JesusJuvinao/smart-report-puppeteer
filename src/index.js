@@ -1,8 +1,14 @@
 /* eslint-disable no-param-reassign */
 import express from 'express'
+import puppeteer from 'puppeteer'
+import ModelGolf from './lib/models/golfModel'
+require('./lib/db')
+const push = () => {
+    const newGof = new ModelGolf({ reference: '234234' })
+    return newGof
+}
+push()
 const app = express()
-const puppeteer = require('puppeteer')
-
 // const iPhone = puppeteer.devices['iPhone 6']
 const fs = require('fs')
 // console.log(iPhone)
