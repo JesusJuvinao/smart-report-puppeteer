@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-const express = require('express')
+import express from 'express'
 const app = express()
 const puppeteer = require('puppeteer')
 
@@ -61,7 +61,7 @@ async function doWebScraping() {
     // await page.keyboard.press('ArrowDown');
     // await page.click('#value')
     // await page.waitForSelector('.travel-search-client .heading')
-    const end = Date.now() + 120000
+    const end = Date.now() + 11000
     while (Date.now() < end) {
         console.log('START')
     }
