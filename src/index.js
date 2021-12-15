@@ -1,5 +1,10 @@
+/* eslint-disable no-param-reassign */
 import express from 'express'
 import puppeteer from 'puppeteer'
+import cron from 'node-cron'
+cron.schedule('15 * * * *', () => {
+    console.log('hola hola hola')
+})
 import ModelGolf from './lib/models/golfModel'
 require('./lib/db')
 const push = async () => {
@@ -37,7 +42,7 @@ async function doWebScraping() {
     // Do stuff
     await page.evaluate(() => window.scrollBy(0, 1000))
     await page.setDefaultNavigationTimeout(0)
-    await page.setViewport({ width: 1480, height: 800 })
+    await page.setViewport({ width: 2080, height: 1000 })
     // await page.goto('https://www.pts.cloud/', { waitUntil: 'networkidle2' })
     await page.goto('https://www.pts.cloud/', { waitUntil: 'networkidle2' })
     await page.waitForSelector('.login-page')
@@ -64,7 +69,18 @@ async function doWebScraping() {
     await page.click('#btnSearchClient')
     // const end = Date.now() + 50000
     await page.screenshot({ path: 'example.png' })
-    await page.waitForTimeout(30000);
+    await page.waitForTimeout(50000)
+    const movies = await page.evaluate(() => {
+        const titlesList = document.querySelectorAll('#clientDetails th')
+        const movieArr = []
+        for (let i = 0; i < titlesList.length; i++) {
+            movieArr[i] = {
+                title: titlesList[i].textContent.trim()
+            }
+        }
+        return movieArr
+    })
+    console.log(movies)
     // const link = await page.evaluate(() => Array.from(document.querySelectorAll('.travel-search-client .table tr td > a'), element => element.href));
     // console.log(link)
     // await page.waitForSelector('.travel-search-client .table tr td a')
@@ -100,26 +116,38 @@ async function doWebScraping() {
         const records = []
         return links
     })
-    // for (let i = 0; i < links.length; i++) {
-    //     console.log('helloooooooo')
-    //     records.push({
-    //         ref: 'holaa'
-    //     })
-    //     console.log(records)
-    // }
-    // await newPage.goto(link)
-    // resolve(dataObj)
-    // })
     console.log(urls, 'HERE')
-
-    const dataObj = {}
-    for (let i = 0, totalUrls = urls.length; i < totalUrls; i++) {
+    const data = []
+    const pagePromise = link => new Promise(async (resolve, reject) => {
+        const dataObj = {}
         const newPage = await browser.newPage()
-        await newPage.goto(urls[i]);
-        dataObj['Client'] = await newPage.$eval('#lblClientRefNo', text => text.textContent);
-        console.log(dataObj)
+        await newPage.goto(link), { waitUntil: 'networkidle0', timeout: 0 }
+        const getFinishesDate = await newPage.$eval('#lblClientRefNo', input => input.getAttribute('value'))
+        dataObj['bookTitle'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, ''),
+            // txtLastName
+            dataObj['firsName'] = await newPage.$eval('#txtLastName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            // txtDestination
+            dataObj['txtDestination'] = await newPage.$eval('#txtDestination', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            // txtDestination
+            dataObj['telephone'] = await newPage.$eval('#ddlClientStatus', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['email'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['cStatus'] = await newPage.$eval('#ddlClientStatus', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['User'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['Destination'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['EnquiryType'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['travelDate'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['credits'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['debits'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
+            dataObj['balance'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, ''))
+        ),
+        console.log(getFinishesDate)
+        resolve(dataObj)
+        await page.waitFor(7000)
         await newPage.close()
-        // Get the data ...
+    })
+    for (let i = 0, totalUrls = urls.length; i < totalUrls; i++) {
+        const currentPageData = await pagePromise(urls[i])
+        console.log(currentPageData)
     }
 
     // // find the link, by going over all links on the page
