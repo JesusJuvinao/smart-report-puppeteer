@@ -11,11 +11,32 @@ const push = async () => {
     const newGof = new ModelGolf({ cStatus: true })
     return newGof
 }
+
+// Connection URL
+const { MongoClient } = require('mongodb');
+const url = 'mongodb+srv://doadmin:3UAzS8db4ci65701@db-mongodb-nyc3-07265-dd6a67db.mongo.ondigitalocean.com/admin?authSource=admin&replicaSet=db-mongodb-nyc3-07265&tls=true&tlsCAFile=ca-certificate.crt';
+const client = new MongoClient(url);
+
 push()
 const app = express()
 // const iPhone = puppeteer.devices['iPhone 6']
 const fs = require('fs')
+const dbName = 'admin';
+
 // console.log(iPhone)
+
+async function mainDB(DataGolfPts) {
+    // Use connect method to connect to the server
+    await client.connect();
+    console.log('Connected successfully to server');
+    const db = client.db(dbName);
+    const collection = db.collection('clientPst');
+    const insertResult = await collection.insertMany(DataGolfPts);
+    console.log('Inserted documents =>', insertResult);
+
+    return 'done.';
+}
+const DataGolfPts=[]
 async function doWebScraping() {
     const browser = await puppeteer.launch({
         headless: false,
@@ -38,8 +59,6 @@ async function doWebScraping() {
             deviceScaleFactor: window.devicePixelRatio
         }
     })
-    // Create a new page in a pristine context.
-    // Do stuff
     await page.evaluate(() => window.scrollBy(0, 1000))
     await page.setDefaultNavigationTimeout(0)
     await page.setViewport({ width: 2080, height: 1000 })
@@ -52,22 +71,15 @@ async function doWebScraping() {
     // const videos = await page.$$('https://www.pts.cloud/client/ClientSearchView')
     await page.type('#Password', 'Spice1441$')
     await page.screenshot({ path: 'buddy-screenshot.png' })
-    // espera por 5 SEGUNDOS
-    // await page.waitFor(5000) --------
     await page.click('#loginBtn')
-    // await page.waitFor(5000) --------
-    // await page.keyboard.press('Enter')
-    // ESPERA PORO LA CARGA DE LA PAGINA
-    // const videos = await page.$$('ytd-thumbnail.ytd-video-renderer')
     await page.waitForSelector('.activeClass')
     await page.click('.activeClass')
     await page.waitForSelector('.custom_class')
     await page.click('.custom_class li > a ')
     await page.waitForSelector('#PaymentStatusId')
-    await page.waitFor(2000)
+    await page.waitForTimeout(2000)
     await page.select('select#PaymentStatusId', '1')
     await page.click('#btnSearchClient')
-    // const end = Date.now() + 50000
     await page.screenshot({ path: 'example.png' })
     await page.waitForTimeout(50000)
     const movies = await page.evaluate(() => {
@@ -117,64 +129,38 @@ async function doWebScraping() {
         return links
     })
     console.log(urls, 'HERE')
-    const data = []
     const pagePromise = link => new Promise(async (resolve, reject) => {
         const dataObj = {}
         const newPage = await browser.newPage()
-        await newPage.goto(link), { waitUntil: 'networkidle0', timeout: 0 }
-        const getFinishesDate = await newPage.$eval('#lblClientRefNo', input => input.getAttribute('value'))
-        dataObj['bookTitle'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, ''),
-            // txtLastName
-            dataObj['firsName'] = await newPage.$eval('#txtLastName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            // txtDestination
-            dataObj['txtDestination'] = await newPage.$eval('#txtDestination', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            // txtDestination
-            dataObj['telephone'] = await newPage.$eval('#ddlClientStatus', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['email'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['cStatus'] = await newPage.$eval('#ddlClientStatus', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['User'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['Destination'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['EnquiryType'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['travelDate'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['credits'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['debits'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, '')),
-            dataObj['balance'] = await newPage.$eval('#txtFirstName', text => text.textContent.replace(/(\r\n\t|\n|\r|\t)/gm, ''))
-        ),
-        console.log(getFinishesDate)
+        newPage.waitForNavigation(),
+        newPage.goto(link),
+        newPage.waitForSelector('#lblClientRefNo')
+        const info = await newPage.$eval('#lblClientRefNo', e => e.innerText);
+        console.log(info, 'sesuponia')
+        await newPage.evaluate(() => {
+            const radio = document.querySelector('#lblClientRefNo');
+            console.log(radio)
+        });
+        // const getFinishesDate = await newPage.$eval('.input-wth-place yellow-bg', input => input.getAttribute('value'))
+        // DataGolfPts = {
+        //     ...getFinishesDate
+        // }
+        // mainDB(DataGolfPts)
+        //     .then(console.log)
+        //     .catch(console.error)
+        //     .finally(() => client.close());
+        console.log(DataGolfPts)
         resolve(dataObj)
-        await page.waitFor(7000)
+        await page.waitForTimeout(7000)
         await newPage.close()
     })
     for (let i = 0, totalUrls = urls.length; i < totalUrls; i++) {
         const currentPageData = await pagePromise(urls[i])
         console.log(currentPageData)
     }
-
-    // // find the link, by going over all links on the page
-    // async function findByLink(page, linkString) {
-    //     const links = await page.$$('a')
-    //     for (let i = 0; i < links.length; i++) {
-    //         const valueHandle = await links[i].getProperty('innerText')
-    //         const linkText = await valueHandle.jsonValue()
-    //         const text = getText(linkText)
-    //         if (linkString == text) {
-    //             console.log(linkString)
-    //             console.log(text)
-    //             console.log('Found')
-    //             return links[i]
-    //         }
-    //     }
-    //     return null
-    // }
-
-    const nextPageButton = await page.waitForXPath(
-        '//*[@id="clientDetails"]/div[2]/ul/li[11]'
-    )
-    console.log(nextPageButton)
+    const nextPageButton = await page.waitForXPath('/html/body/div[5]/div[2]/ul/li[6]/a')
+    console.log(nextPageButton, 'PERO QUE PASA CHAVALES')
     await nextPageButton.click()
-
-    // #tableClientList > tbody > tr:nth-child(100)
-    // #clientDetails > div.pager > ul > li:nth-child(11)
 
     const html = await page.content()
     console.log('Dimensions:', dimensions)
